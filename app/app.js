@@ -3,6 +3,18 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const app = express();
 
+
+import sqlite3
+from flask import Flask
+
+
+app = Flask(__name__)
+
+
+if __name__ == '__main__':
+    app.debug = True
+    app.run()
+
 if (process.env.NODE_ENV !== 'test') {
   const logger = require('morgan');
   app.use(logger('dev'));
