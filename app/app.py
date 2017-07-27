@@ -1,5 +1,5 @@
 import sqlite3
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, json
 from werkzeug import secure_filename
 import os
 
@@ -18,15 +18,44 @@ def collection():
   if request.method == 'GET':
     try:
         with sqlite3.connect('reddit.db') as connection:
+            connection.row_factory = dict_factory
             cursor = connection.cursor()
             cursor.execute("""
-                SELECT * FROM posts JOIN comments ON posts.id = comments.post_id;
+                SELECT * FROM posts;
                 """)
             posts = cursor.fetchall()
             print(posts)
     except:
         result = {'status': 0, 'message': 'error'}
-    return jsonify(posts)
+    return json.dumps(posts)
+
+def dict_factory(cursor, row):
+    d = {}
+    for idx,col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
+@app.route('/api/posts/<post_id>/comments', methods = ['GET'])
+def resource(post_id):
+    if request.method == 'GET':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                connection.row_factory = dict_factory
+                cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT * FROM comments WHERE comments.post_id='post_id';
+                    """)
+                posts = cursor.fetchall()
+                print(posts)
+        except:
+            result = {'status': 0, 'message': 'error'}
+        return json.dumps(posts)
+
+
+# [(2, 'Oldie but a Goodie', 'There was an Old Person of Chester', 'Edward Lear', 'https://img.buzzfeed.com/buzzfeed-static/static/2015-11/19/10/enhanced/webdr13/anigif_enhanced-22345-1447947761-7.gif?downsize=715:*&output-format=auto&output-quality=auto',
+#  0, '11-11-2011', 3, 'crazy', 'Hildegard', '2017-07-27 21:09:20', 2)]
+
+
 #     pass knex('posts')
 #       .then(posts => {
 #         return knex('comments')

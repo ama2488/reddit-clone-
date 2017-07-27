@@ -20,8 +20,6 @@ def main():
         cur.execute(sql, user)
         return cur.lastrowid
 
-    database = "/Users/abbystarnes/Documents/Q3/reddit-clone-/reddit.db"
-
     conn = sqlite3.connect('reddit.db')
     with conn:
         # create a new post
