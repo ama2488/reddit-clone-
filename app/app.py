@@ -2,40 +2,43 @@ import sqlite3
 from flask import Flask, request, jsonify, send_file, json
 from werkzeug import secure_filename
 import os
+from app.posts import posts
 
 app = Flask(__name__)
+app.register_blueprint(posts)
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(APP_ROOT, 'static/index.html')
-# app.config['INDEX'] = INDEX
 
 @app.route('/', methods =['GET'])
 def index():
     return send_file(INDEX)
 
-@app.route('/api/posts/', methods =['GET', 'POST'])
+# @app.route('/posts', methods =['GET'])
+# def posts():
+#     return send_file(INDEX)
+
+@app.route('/api/posts', methods =['GET', 'POST'])
 def collection():
-  if request.method == 'GET':
-    try:
-        with sqlite3.connect('reddit.db') as connection:
-            connection.row_factory = dict_factory
-            cursor = connection.cursor()
-            cursor.execute("""
+    if request.method == 'GET':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                connection.row_factory = dict_factory
+                cursor = connection.cursor()
+                cursor.execute("""
                 SELECT * FROM posts;
                 """)
-            posts = cursor.fetchall()
-            print(posts)
-    except:
-        result = {'status': 0, 'message': 'error'}
-    return json.dumps(posts)
+                posts = cursor.fetchall()
+        except:
+            result = {'status': 0, 'message': 'error'}
+        print(posts)
+        return json.dumps(posts)
+    elif request.method == 'POST':
+        data = request.get_json(force=True)
+        result = add_post(data['title'], data['body'], data['author'], data['image_url'])
+        return jsonify(result)
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx,col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
-@app.route('/api/posts/<post_id>/comments', methods = ['GET'])
+@app.route('/api/posts/<post_id>', methods = ['GET', 'PATCH', 'DELETE'])
 def resource(post_id):
     if request.method == 'GET':
         try:
@@ -43,93 +46,144 @@ def resource(post_id):
                 connection.row_factory = dict_factory
                 cursor = connection.cursor()
                 cursor.execute("""
-                    SELECT * FROM comments WHERE comments.post_id='post_id';
-                    """)
-                posts = cursor.fetchall()
-                print(posts)
+                SELECT * FROM posts WHERE id = ?;
+                """, (post_id))
+                result = cursor.fetchall()
         except:
             result = {'status': 0, 'message': 'error'}
-        return json.dumps(posts)
+        return json.dumps(post)
+    elif request.method == 'PATCH':
+        data = request.get_json(force=True)
+        result = edit_post(data['title'], data['body'], data['author'], data['image_url'], data['id'])
+        return jsonify(result)
+    elif request.method == 'DELETE':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                connection.row_factory = dict_factory
+                cursor = connection.cursor()
+                cursor.execute("""
+                DELETE FROM posts WHERE id = ?;
+                """, (post_id))
+                result = cursor.fetchall()
+        except:
+            result = {'status': 0, 'message': 'error'}
+        return jsonify(result)
 
+@app.route('/api/posts/<post_id>/votes', methods = ['POST', 'DELETE'])
+def votes(post_id):
+    if request.method == 'POST':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                connection.row_factory = dict_factory
+                cursor = connection.cursor()
+                cursor.execute("""
+                UPDATE posts SET vote_count = vote_count + 1 WHERE id = ?;
+                """, (post_id))
+                result = cursor.fetchall()
+        except:
+            result = {'status': 0, 'message': 'error'}
+        return json.dumps(result)
+    elif request.method == 'DELETE':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                connection.row_factory = dict_factory
+                cursor = connection.cursor()
+                cursor.execute("""
+                UPDATE posts SET vote_count = vote_count - 1 WHERE id = ?;
+                """, (post_id))
+                result = cursor.fetchall()
+        except:
+            result = {'status': 0, 'message': 'error'}
+        return json.dumps(result)
 
-# [(2, 'Oldie but a Goodie', 'There was an Old Person of Chester', 'Edward Lear', 'https://img.buzzfeed.com/buzzfeed-static/static/2015-11/19/10/enhanced/webdr13/anigif_enhanced-22345-1447947761-7.gif?downsize=715:*&output-format=auto&output-quality=auto',
-#  0, '11-11-2011', 3, 'crazy', 'Hildegard', '2017-07-27 21:09:20', 2)]
+@app.route('/api/posts/<post_id>/comments', methods = ['GET', 'POST'])
+def comments(post_id):
+    if request.method == 'GET':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                connection.row_factory = dict_factory
+                cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT * FROM comments WHERE comments.post_id = ?;
+                    """, (post_id))
+                comments = cursor.fetchall()
+        except:
+            result = {'status': 0, 'message': 'error'}
+        return json.dumps(comments)
+    elif request.method == 'POST':
+        data = request.get_json(force=True)
+        result = add_comment(data['content'], data['author'], post_id)
+        return jsonify(result)
 
+@app.route('/api/posts/<post_id>/comments/<comment_id>', methods = ['PATCH', 'DELETE'])
+def comment(post_id, comment_id):
+    if request.method == 'PATCH':
+        data = request.get_json(force=True)
+        result = edit_comment(data['content'], data['author'], data['id'])
+        return jsonify(result)
+    elif request.method == 'DELETE':
+        try:
+            with sqlite3.connect('reddit.db') as connection:
+                cursor = connection.cursor()
+                cursor.execute("""
+                DELETE FROM comments WHERE id = ?;
+                """, (comment_id,))
+                result = cursor.fetchall()
+        except:
+            result = {'status': 0, 'message': 'error'}
+        return jsonify(result)
+        
+#HELPER FUNCTIONS
 
-#     pass knex('posts')
-#       .then(posts => {
-#         return knex('comments')
-#           .whereIn('post_id', posts.map(p => p.id))
-#           .then((comments) => {
-#             const commentsByPostId = comments.reduce((result, comment) => {
-#               result[comment.post_id] = result[comment.post_id] || []
-#               result[comment.post_id].push(comment)
-#               return result
-#             }, {})
-#             posts.forEach(post => {
-#               post.comments = commentsByPostId[post.id] || []
-#             })
-#             res.json(posts)
-#           })
-#       })
-#       .catch(err => next(err))
-# elif request.method == 'POST':
-# def add_post(title, body, author, image_url):
-#     try:
-#         with sqlite3.connect('reddit.db') as connection:
-#             cursor = connection.cursor()
-#             cursor.execute("""
-#                 INSERT INTO posts ( title, body, author, image_url, vote_count) values (?, ?, ?, ?, 0);
-#                 """, ( title, body, author, image_url))
-#             result = {'status': 1, 'message': 'Post Added'}
-#     except:
-#         result = {'status': 0, 'message': 'error'}
-#     return result
-#     pass knex('posts')
-#       .insert(params(req))
-#       .returning('*')
-#       .then(posts => res.json(posts[0]))
-#       .catch(err => next(err))
-# })
-#
-# @app.route('/<post_id>', methods = ['GET', 'PATCH', 'DELETE'])
-#   def resource(post_id):
-#     if request.method == 'GET':
-#         pass knex('posts')
-#     .where({id: req.params.id})
-#     .first()
-#     .then(post => res.json(post))
-#     .catch(err => next(err))
-# elif request.method == 'PATCH':
-#     knex('posts')
-#       .update(params(req))
-#       .where({id: req.params.id})
-#       .returning('*')
-#       .then(posts => res.json(posts[0]))
-#       .catch(err => next(err))
-# elif request.method == 'DELETE':
-#     knex('posts')
-#       .del()
-#       .where({id: req.params.id})
-#       .then(() => res.end())
-#       .catch(err => next(err))
-#
-# @app.route('/<post_id>/votes', methods = ['POST', 'DELETE'])
-#     def resource(post_id):
-#     if request.method == 'POST':
-#         pass knex('posts')
-#           .update('vote_count', knex.raw('vote_count + 1'))
-#           .where({id: req.params.id})
-#           .then( () => knex('posts').where({id: req.params.id}).first() )
-#           .then( post => res.json({vote_count: post.vote_count}))
-#           .catch(err => next(err))
-#     elif request.method == 'DELETE':
-#         pass knex('posts')
-#           .update('vote_count', knex.raw('vote_count - 1'))
-#           .where({id: req.params.id})
-#           .then( () => knex('posts').where({id: req.params.id}).first() )
-#           .then( post => res.json({vote_count: post.vote_count}))
-#           .catch(err => next(err))
+def dict_factory(cursor, row):
+    d = {}
+    for idx,col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
+def add_post(title, body, author, image_url):
+    try:
+        with sqlite3.connect('reddit.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute("""
+            INSERT INTO posts ( title, body, author, image_url, vote_count) values (?, ?, ?, ?, 0);
+            """, ( title, body, author, image_url))
+            result = cursor.fetchall()
+    except:
+        result = {'status': 0, 'message': 'error'}
+        return result
+
+def edit_post(title, body, author, image_url, postid):
+    try:
+        with sqlite3.connect('reddit.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute("UPDATE posts SET title = ?, body = ?, author = ?, image_url = ? WHERE ID = ?;", (title, body, author, image_url, postid))
+            result = cursor.fetchall()
+    except:
+        result = {'status': 0, 'message': 'Error'}
+    return result
+
+def add_comment(content, author, postid):
+    try:
+        with sqlite3.connect('reddit.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute("""
+            INSERT INTO comments (content, author, post_id) values (?, ?, ?);
+            """, (content, author, postid))
+            result = cursor.fetchall()
+    except:
+        result = {'status': 0, 'message': 'error'}
+        return result
+
+def edit_comment(content, author, commentid):
+    try:
+        with sqlite3.connect('reddit.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute("UPDATE comments SET content = ?, author = ? WHERE ID = ?;", (content, author, commentid))
+            result = cursor.fetchall()
+    except:
+        result = {'status': 0, 'message': 'Error'}
+    return result
 
 if __name__ == '__main__':
     app.debug = True

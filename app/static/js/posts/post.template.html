@@ -10,7 +10,7 @@
         <a ui-sref='edit({id: $ctrl.post.id})' class="text-right btn" ><i class="glyphicon glyphicon-edit"></i>edit</a>
       </span>
     </h3>
-    <h5><em><span am-time-ago="post.created_at"></span> by {{ $ctrl.post.author }}</em></h5>
+    <h5><em><span am-time-ago="$ctrl.post.created_at"></span> by {{ $ctrl.post.author }}</em></h5>
     <h5 class="text-left">
       <ng-pluralize count="$ctrl.post.vote_count" when="{'0': '0 Votes',
       '1': '1 Vote',

@@ -5,7 +5,7 @@
     se.posts = [];
 
     se.getPosts = function getPosts() {
-      return $http.get('/api/posts/').then((res) => {
+      return $http.get('/api/posts').then((res) => {
         se.posts = res.data;
       });
     };

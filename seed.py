@@ -30,8 +30,8 @@ def main():
 
 
         # posts
-        post_1 = ('Cheesy Post', text1, 'Ironic Irma', 'https://images.pexels.com/photos/211050/pexels-photo-211050.jpeg?h=350&auto=compress', '12-17-2004')
-        post_2 = ('Oldie but a Goodie', text2, 'Edward Lear', 'https://img.buzzfeed.com/buzzfeed-static/static/2015-11/19/10/enhanced/webdr13/anigif_enhanced-22345-1447947761-7.gif?downsize=715:*&output-format=auto&output-quality=auto', '11-11-2011')
+        post_1 = ('Cheesy Post', text1, 'Ironic Irma', 'https://images.pexels.com/photos/211050/pexels-photo-211050.jpeg?h=350&auto=compress')
+        post_2 = ('Oldie but a Goodie', text2, 'Edward Lear', 'https://img.buzzfeed.com/buzzfeed-static/static/2015-11/19/10/enhanced/webdr13/anigif_enhanced-22345-1447947761-7.gif?downsize=715:*&output-format=auto&output-quality=auto')
 
         # create posts
         create_post(conn, post_1)

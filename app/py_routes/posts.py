@@ -1,8 +1,8 @@
-import sqlite3
-from flask import Flask, request, jsonify
+posts = Blueprint('posts', __name__, template_folder='templates')
 
-
-router = Flask(__posts__)
+@posts.route('/posts')
+def show():
+    return send_file(INDEX)
 
 @app.route('/', methods =['GET', 'POST'])
 def collection():
