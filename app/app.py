@@ -2,10 +2,9 @@ import sqlite3
 from flask import Flask, request, jsonify, send_file, json
 from werkzeug import secure_filename
 import os
-from app.posts import posts
 
 app = Flask(__name__)
-app.register_blueprint(posts)
+# app.register_blueprint(posts)
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(APP_ROOT, 'static/index.html')
@@ -14,9 +13,9 @@ INDEX = os.path.join(APP_ROOT, 'static/index.html')
 def index():
     return send_file(INDEX)
 
-# @app.route('/posts', methods =['GET'])
-# def posts():
-#     return send_file(INDEX)
+@app.route('/posts', methods =['GET'])
+def posts():
+    return send_file(INDEX)
 
 @app.route('/api/posts', methods =['GET', 'POST'])
 def collection():
@@ -132,7 +131,7 @@ def comment(post_id, comment_id):
         except:
             result = {'status': 0, 'message': 'error'}
         return jsonify(result)
-        
+
 #HELPER FUNCTIONS
 
 def dict_factory(cursor, row):
